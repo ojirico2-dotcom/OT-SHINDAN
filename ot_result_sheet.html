@@ -165,7 +165,7 @@
   const order = ['A','B','C','D','E'];
   const root = document.documentElement;
   let currentLetter = 'A';
-  let currentBlob = null;
+  let currentCanvas = null;
 
   function paramType(){
     const p = new URLSearchParams(location.search).get('type');
@@ -187,7 +187,7 @@
     document.getElementById('share-btn').style.display = 'none';
     document.getElementById('save-status').textContent = '';
     document.getElementById('hint').textContent = '下のボタンを押すと、保存できる画像が下に表示されます。';
-    currentBlob = null;
+    currentCanvas = null;
 
     const sw = document.getElementById('type-switch');
     sw.innerHTML = '';
@@ -361,39 +361,41 @@
     status.textContent = '画像を作成中…';
     try{
       const canvas = drawSheet(currentLetter);
-      canvas.toBlob((blob)=>{
-        if(!blob){
-          status.textContent = '画像の作成に失敗しました。もう一度お試しください';
-          return;
-        }
-        currentBlob = blob;
-        const url = URL.createObjectURL(blob);
-        const img = document.getElementById('result-img');
-        img.src = url;
-        img.style.display = 'block';
+      currentCanvas = canvas;
 
-        document.getElementById('hint').textContent = '上の画像を長押しして「写真に追加」または「画像を保存」を選んでください';
-        status.textContent = '';
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.getElementById('result-img');
+      img.src = dataUrl;
+      img.style.display = 'block';
 
-        const shareBtn = document.getElementById('share-btn');
-        if(navigator.canShare && navigator.canShare({ files: [new File([blob],'x.png',{type:'image/png'})] })){
-          shareBtn.style.display = 'block';
-        }
-      }, 'image/png');
+      document.getElementById('hint').textContent = '上の画像を長押しして「写真に追加」または「画像を保存」を選んでください';
+      status.textContent = '';
+
+      const shareBtn = document.getElementById('share-btn');
+      if(navigator.share){
+        shareBtn.style.display = 'block';
+      }
     }catch(e){
       status.textContent = '画像の作成に失敗しました。もう一度お試しください';
     }
   });
 
   document.getElementById('share-btn').addEventListener('click', async ()=>{
-    if(!currentBlob) return;
+    if(!currentCanvas) return;
     const status = document.getElementById('save-status');
-    try{
-      const file = new File([currentBlob], 'ot_shindan_result.png', { type: 'image/png' });
-      await navigator.share({ files: [file], title: 'OT適性診断の結果' });
-    }catch(e){
-      status.textContent = '共有をキャンセルしました。画像を長押しでも保存できます';
-    }
+    currentCanvas.toBlob(async (blob)=>{
+      if(!blob) return;
+      try{
+        const file = new File([blob], 'ot_shindan_result.png', { type: 'image/png' });
+        if(navigator.canShare && !navigator.canShare({ files: [file] })){
+          status.textContent = 'この端末では共有に対応していません。画像を長押しして保存してください';
+          return;
+        }
+        await navigator.share({ files: [file], title: 'OT適性診断の結果' });
+      }catch(e){
+        status.textContent = '共有をキャンセルしました。画像を長押しでも保存できます';
+      }
+    }, 'image/png');
   });
 })();
 </script>
