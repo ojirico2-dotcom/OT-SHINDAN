@@ -221,11 +221,39 @@
     try{
       const sheet = document.getElementById('sheet');
       const canvas = await html2canvas(sheet, { backgroundColor: null, scale: 3 });
-      const link = document.createElement('a');
-      link.download = 'ot_shindan_result.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-      status.textContent = '保存しました（写真アプリ／ダウンロードをご確認ください）';
+
+      canvas.toBlob(async (blob)=>{
+        if(!blob){
+          status.textContent = '画像の作成に失敗しました。この画面を長押しして保存してください';
+          return;
+        }
+        const file = new File([blob], 'ot_shindan_result.png', { type: 'image/png' });
+
+        // iPhoneなど：共有シートから「画像を保存」できる場合はこちらを使う
+        if(navigator.canShare && navigator.canShare({ files: [file] })){
+          try{
+            await navigator.share({ files: [file], title: 'OT適性診断の結果' });
+            status.textContent = '';
+            return;
+          }catch(shareErr){
+            // 共有をキャンセルした場合は下のフォールバックに進む
+          }
+        }
+
+        // 共有シートが使えない場合：新しいタブに画像を開き、長押し保存してもらう
+        const url = URL.createObjectURL(blob);
+        const opened = window.open(url, '_blank');
+        if(!opened){
+          const link = document.createElement('a');
+          link.download = 'ot_shindan_result.png';
+          link.href = url;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+        status.textContent = '表示された画像を長押しして「写真に追加」を選んでください';
+      }, 'image/png');
+
     }catch(e){
       status.textContent = '保存できない場合は、この画面を長押しして「画像を保存」してください';
     }
