@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>あなたの中の作業療法士診断</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg: #0A0B0A;
+    --surface: #171916;
+    --surface-hi: #202320;
+    --white: #F5F6F2;
+    --muted: #9BA39B;
+    --line: rgba(245,246,242,0.14);
+    --a: #17E3A1;
+    --b: #FF8A3D;
+    --c: #FF3D77;
+    --d: #2FD1FF;
+    --e: #9A7CFF;
+    --cur: var(--white);
+    --opt: var(--white);
+    --font-display: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-display);
+    overflow: hidden;
+  }
+
+  #glow{
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(30% 34% at 8% 14%, color-mix(in srgb, var(--a) 20%, transparent), transparent 70%),
+      radial-gradient(28% 32% at 92% 10%, color-mix(in srgb, var(--b) 18%, transparent), transparent 70%),
+      radial-gradient(32% 36% at 88% 90%, color-mix(in srgb, var(--c) 16%, transparent), transparent 70%),
+      radial-gradient(28% 32% at 6% 88%, color-mix(in srgb, var(--d) 16%, transparent), transparent 70%),
+      radial-gradient(24% 28% at 50% 55%, color-mix(in srgb, var(--e) 14%, transparent), transparent 70%),
+      radial-gradient(42% 48% at 50% 45%, color-mix(in srgb, var(--cur) 24%, transparent), transparent 70%);
+    transition: background 0.6s ease;
+  }
+
+  #app{
+    position: relative; z-index: 1;
+    height: 100%; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    padding: clamp(18px, 3.4vw, 48px);
+  }
+
+  .screen{
+    width: 100%; max-width: 780px;
+    display: none; flex-direction: column;
+  }
+  .screen.active{ display: flex; }
+  .screen.enter{ animation: rise 0.5s cubic-bezier(.2,.8,.2,1); }
+
+  @keyframes rise{
+    from{ opacity: 0; transform: translateY(18px) scale(0.985); }
+    to{ opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .slash{
+    position: absolute; z-index: 0; pointer-events: none;
+    width: 140%; height: 46px; left: -20%;
+    background: linear-gradient(90deg, transparent, var(--cur), transparent);
+    opacity: 0.16;
+    transform: rotate(-6deg);
+    transition: background 0.6s ease;
+    filter: blur(2px);
+  }
+  .slash.top{ top: 8%; }
+  .slash.bottom{ bottom: 6%; }
+
+  /* ---------- 冒頭 ---------- */
+  #screen-intro{ text-align:left; gap: 30px; position: relative; }
+  .eyebrow{
+    font-size: 12.5px; letter-spacing: 0.32em; font-weight: 800;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .eyebrow b{ color: var(--cur); transition: color 0.5s ease; }
+  .intro-title{
+    font-size: clamp(38px, 7vw, 68px);
+    line-height: 1.12;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin: 0;
+  }
+  .intro-title em{
+    font-style: normal;
+    background: linear-gradient(90deg, var(--cur), color-mix(in srgb, var(--cur) 40%, white));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    transition: background 0.5s ease;
+  }
+  .intro-sub{
+    font-size: 16px; color: var(--muted); line-height: 1.8; max-width: 480px; margin: 0;
+  }
+  .meta-row{ display:flex; gap: 22px; margin-top: 6px; flex-wrap: wrap; }
+  .meta{ display:flex; flex-direction: column; gap: 2px; }
+  .meta .n{ font-size: 22px; font-weight: 900; }
+  .meta .l{ font-size: 11px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; }
+
+  .type-preview{ display:flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .type-chip{
+    display:flex; align-items:center; gap: 8px;
+    border: 1.5px solid var(--pc); border-radius: 999px;
+    padding: 8px 14px 8px 10px;
+    font-size: 12.5px; font-weight: 800; color: var(--white);
+    background: color-mix(in srgb, var(--pc) 14%, transparent);
+  }
+  .type-chip .dot{ width: 10px; height: 10px; border-radius: 50%; background: var(--pc); flex: none; }
+
+  .btn-primary{
+    font-family: var(--font-display);
+    background: var(--white); color: var(--bg);
+    border: none; border-radius: 999px;
+    padding: 20px 46px; font-size: 16px; font-weight: 900;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; align-self: flex-start;
+    transition: transform 0.15s cubic-bezier(.2,.8,.2,1), background 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  .btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 10px 30px -8px color-mix(in srgb, var(--cur) 60%, transparent); }
+  .btn-primary:active{ transform: translateY(0) scale(0.97); }
+
+  .btn-ghost{
+    font-family: var(--font-display);
+    background: transparent; color: var(--white);
+    border: 1.5px solid var(--line); border-radius: 999px;
+    padding: 16px 34px; font-size: 14px; font-weight: 800;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .btn-ghost:hover{ border-color: var(--white); transform: translateY(-2px); }
+  .btn-ghost:active{ transform: translateY(0) scale(0.97); }
+
+  /* ---------- 質問 ---------- */
+  #screen-quiz{ gap: 22px; }
+  .track{
+    display:flex; gap: 6px;
+  }
+  .seg{
+    height: 6px; flex: 1; border-radius: 3px;
+    background: var(--line);
+    overflow: hidden;
+    position: relative;
+  }
+  .seg i{
+    position: absolute; inset: 0; border-radius: 3px;
+    background: var(--white);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.35s ease, background 0.35s ease;
+  }
+  .seg.filled i{ transform: scaleX(1); }
+
+  .quiz-head{ display:flex; align-items: baseline; justify-content: space-between; }
+  .qcount{ font-size: 13px; font-weight: 800; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+  .qcount b{ color: var(--white); }
+
+  .qtext{
+    font-size: clamp(22px, 3.6vw, 30px);
+    font-weight: 900; letter-spacing: -0.01em;
+    line-height: 1.42; margin: 0;
+  }
+
+  .options{ display:flex; flex-direction: column; gap: 10px; }
+  .option{
+    position: relative; overflow: hidden;
+    display:flex; align-items:center; gap: 18px;
+    background: var(--surface);
+    border: 1.5px solid color-mix(in srgb, var(--opt) 30%, var(--line));
+    border-radius: 18px;
+    padding: 18px 22px;
+    text-align: left; cursor: pointer;
+    font-size: 15px; line-height: 1.5; color: var(--white);
+    font-family: var(--font-display); font-weight: 500;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
+  }
+  .option:hover{ border-color: var(--opt); background: var(--surface-hi); }
+  .option:active{ transform: scale(0.985); }
+  .option:focus-visible{ outline: 2px solid var(--white); outline-offset: 2px; }
+  .option .ghost{
+    position:absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    font-size: 64px; font-weight: 900; color: var(--opt);
+    opacity: 0.10; letter-spacing: 0; pointer-events: none; line-height: 1;
+  }
+  .badge{
+    flex: none; width: 36px; height: 36px; border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight: 900; font-size: 14px;
+    background: color-mix(in srgb, var(--opt) 20%, var(--surface-hi));
+    color: var(--opt);
+    border: 1.5px solid color-mix(in srgb, var(--opt) 55%, transparent);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .option.picked{ background: var(--opt); border-color: var(--opt); }
+  .option.picked .badge{ background: var(--bg); color: var(--opt); border-color: transparent; }
+  .option.picked span:not(.badge):not(.ghost){ color: var(--bg); font-weight: 700; }
+  .option.picked .ghost{ opacity: 0.14; color: var(--bg); }
+
+  /* ---------- 結果 ---------- */
+  #screen-result{ text-align:center; align-items:center; gap: 16px; position: relative; }
+  .result-tag{
+    font-size: 12.5px; font-weight: 900; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--cur); transition: color 0.4s ease;
+  }
+  .result-icon{ width: 64px; height: 64px; margin: 2px 0; }
+  .result-name{
+    font-size: clamp(34px, 7vw, 58px);
+    font-weight: 900; letter-spacing: -0.02em; line-height: 1.05; margin: 0;
+  }
+  .result-hook{
+    font-size: 16px; font-weight: 700; color: var(--muted); margin: -4px 0 6px;
+  }
+  .result-desc{
+    font-size: 15.5px; line-height: 1.95; color: #D8DAD6;
+    max-width: 560px; margin: 0; white-space: pre-line;
+  }
+  .fields{ display:flex; gap:8px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .field-chip{
+    font-size: 12px; font-weight: 800; letter-spacing: 0.04em;
+    border: 1.5px solid color-mix(in srgb, var(--cur) 55%, var(--line));
+    background: color-mix(in srgb, var(--cur) 10%, transparent);
+    border-radius: 999px;
+    padding: 8px 16px; color: var(--white);
+  }
+  .closing{
+    margin-top: 8px; background: var(--surface); border: 1.5px solid var(--line);
+    border-radius: 18px; padding: 20px 24px; font-size: 13.5px; line-height: 1.9;
+    color: var(--muted); max-width: 580px; text-align: left;
+  }
+  .closing b{ color: var(--white); }
+  .result-actions{ display:flex; gap: 12px; margin-top: 8px; }
+
+  .qr-block{
+    display:flex; align-items:center; gap: 16px;
+    background: var(--surface); border: 1.5px solid var(--line);
+    border-radius: 18px; padding: 16px 20px; margin-top: 4px;
+    max-width: 420px;
+  }
+  .qr-block #qr-canvas{
+    flex: none; width: 96px; height: 96px; border-radius: 10px; overflow: hidden;
+    background: #fff; display:flex; align-items:center; justify-content:center;
+  }
+  .qr-copy{ text-align:left; }
+  .qr-title{ font-size: 13px; font-weight: 900; letter-spacing: 0.04em; }
+  .qr-desc{ font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 4px; }
+
+  @media (max-width: 480px){
+    .option{ padding: 15px 16px; font-size: 14px; }
+    .badge{ width: 30px; height: 30px; font-size: 12.5px; }
+    .intro-title{ font-size: 34px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="glow"></div>
+<div id="app">
+
+  <!-- 冒頭画面 -->
+  <div class="screen active enter" id="screen-intro">
+    <div class="slash top"></div>
+    <div class="eyebrow">FUKUOKA IKEN &amp; SPORTS COLLEGE　<b>OT SHINDAN</b></div>
+    <h1 class="intro-title">あなたの中の<br>作業療法士を、<br><em>見つけ出せ。</em></h1>
+    <p class="intro-sub">6つの質問に答えると、5タイプの中からあなたの適性がわかる。所要時間は約3分。</p>
+    <div class="type-preview">
+      <span class="type-chip" style="--pc: var(--a)"><span class="dot"></span>観察の匠</span>
+      <span class="type-chip" style="--pc: var(--b)"><span class="dot"></span>発想の仕掛け人</span>
+      <span class="type-chip" style="--pc: var(--c)"><span class="dot"></span>伴走者</span>
+      <span class="type-chip" style="--pc: var(--d)"><span class="dot"></span>遊びの魔術師</span>
+      <span class="type-chip" style="--pc: var(--e)"><span class="dot"></span>逆算の設計士</span>
+    </div>
+    <div class="meta-row">
+      <div class="meta"><span class="n">06</span><span class="l">Questions</span></div>
+      <div class="meta"><span class="n">05</span><span class="l">Types</span></div>
+      <div class="meta"><span class="n">3min</span><span class="l">Time</span></div>
+    </div>
+    <button class="btn-primary" id="start-btn">START</button>
+    <div class="slash bottom"></div>
+  </div>
+
+  <!-- 質問画面 -->
+  <div class="screen" id="screen-quiz">
+    <div class="track" id="track"></div>
+    <div class="quiz-head">
+      <div class="qcount" id="qcount"></div>
+    </div>
+    <p class="qtext" id="qtext"></p>
+    <div class="options" id="options"></div>
+  </div>
+
+  <!-- 結果画面 -->
+  <div class="screen" id="screen-result">
+    <div class="slash top"></div>
+    <div class="result-tag" id="result-tag">YOUR TYPE</div>
+    <svg class="result-icon" id="result-icon" viewBox="0 0 100 100"></svg>
+    <h2 class="result-name" id="result-name"></h2>
+    <p class="result-hook" id="result-hook"></p>
+    <p class="result-desc" id="result-desc"></p>
+    <div class="fields" id="result-fields"></div>
+    <div class="qr-block">
+      <div id="qr-canvas"></div>
+      <div class="qr-copy">
+        <div class="qr-title">結果を画像で持ち帰る</div>
+        <div class="qr-desc">QRを読み取ると、スマホでこの結果を保存できます</div>
+      </div>
+    </div>
+    <div class="closing" id="result-closing"></div>
+    <div class="result-actions">
+      <button class="btn-ghost" id="retry-btn">RETRY</button>
+    </div>
+    <div class="slash bottom"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+
+  const questions = [
+    {
+      q: "友達とグループで何かを決めるとき、あなたは？",
+      options: [
+        "みんなの表情をよく見て、言い出しにくそうな子の意見をそっと拾う",
+        "「こうしたらもっとやりやすいのに」と工夫を提案する",
+        "誰かが悩んでいそうだったら、まず横で話を聞く",
+        "場を盛り上げるアイデアを出して、みんなを巻き込む",
+        "ゴールから逆算して、誰が何をやるか役割分担を決める"
+      ]
+    },
+    {
+      q: "苦手な科目やタスクに直面したとき、あなたは？",
+      options: [
+        "得意な人のやり方をよく観察して、真似るところから始める",
+        "自分なりのやり方や道具を工夫して乗り切る",
+        "一人で抱え込まず、誰かに相談しながら進める",
+        "自分でルールや目標をつくって、ゲームみたいにして乗り切る",
+        "締め切りから逆算してスケジュールを立てる"
+      ]
+    },
+    {
+      q: "家族や友人が落ち込んでいるとき、あなたが自然にしてしまうことは？",
+      options: [
+        "直接は聞かず、様子や小さな変化に気づいて、声をかけるタイミングを見計らう",
+        "気分転換になりそうな行動や環境の変化を提案する",
+        "とにかくそばにいて、話を聞き続ける",
+        "一緒に何か楽しいことをして気を紛らわせる",
+        "何が原因か整理して、解決までの道筋を一緒に考える"
+      ]
+    },
+    {
+      q: "自分の短所だと思っていることに一番近いのは？",
+      options: [
+        "心配性で、小さなことによく気づいてしまう",
+        "凝り性で、道具ややり方についこだわってしまう",
+        "情に厚くて、人の感情に引きずられやすい",
+        "落ち着きがなく、じっとしているのが苦手",
+        "効率を考えすぎて、無駄が気になってしまう"
+      ]
+    },
+    {
+      q: "部活・バイト・委員会で一番やりがいを感じた瞬間は？",
+      options: [
+        "誰も気づかなかった小さな変化や成長に、自分だけ気づけた時",
+        "自分の工夫でみんなが楽になった時",
+        "誰かの悩みにじっくり付き合って、感謝された時",
+        "場を盛り上げて、周りの笑顔が増えた時",
+        "計画通りに物事が進んで、ちゃんと結果が出た時"
+      ]
+    },
+    {
+      q: "もし1週間、誰かの生活をサポートするボランティアをするなら？",
+      options: [
+        "一人暮らしのお年寄りの話し相手・見守り",
+        "障害のある人の「家の中の使いやすさ」を一緒に考える係",
+        "心に悩みを抱える人の相談相手",
+        "発達に特性のある子どもと遊ぶ係",
+        "地域の健康づくりイベントの企画・運営"
+      ]
+    }
+  ];
+
+  const letters = ['A','B','C','D','E'];
+  const cssVar = {A:'--a', B:'--b', C:'--c', D:'--d', E:'--e'};
+
+  const types = {
+    A: {
+      name: "観察の匠",
+      hook: "人の「変化」に気づける人",
+      var: '--a',
+      desc: "心配性、細かいことが気になる——それは短所ではなく職業的な武器。OTの現場では「昨日より少し手が動くようになった」という誰も気づかないレベルの変化を見逃さないことが、リハビリの成果を左右する。高齢者や地域リハの領域では、この気づく力がそのまま専門性になる。",
+      fields: ["高齢者リハビリ", "地域包括ケア", "訪問リハビリ"],
+      icon: (c)=>`<circle cx="50" cy="50" r="34" fill="none" stroke="${c}" stroke-width="4"/>
+                   <circle cx="50" cy="50" r="9" fill="${c}"/>
+                   <path d="M50 12 L50 24 M50 76 L50 88 M12 50 L24 50 M76 50 L88 50" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`
+    },
+    B: {
+      name: "発想の仕掛け人",
+      hook: "「もっと楽になる方法」を思いつく人",
+      var: '--b',
+      desc: "凝り性、道具やこだわりが強い——これも立派な適性。OTには「自助具」という考え方があり、麻痺や障害があっても本人がやりたいことをできるように、道具や動線を工夫する。既存のやり方を疑って工夫できる人ほど向いている。",
+      fields: ["身体障害領域", "自助具・福祉用具", "住環境調整"],
+      icon: (c)=>`<path d="M50 12 C68 12 82 26 82 43 C82 55 74 60 71 68 L29 68 C26 60 18 55 18 43 C18 26 32 12 50 12 Z" fill="none" stroke="${c}" stroke-width="4"/>
+                   <path d="M36 78 L64 78 M40 88 L60 88" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`
+    },
+    C: {
+      name: "伴走者",
+      hook: "そばにいて、一緒に歩ける人",
+      var: '--c',
+      desc: "情に厚くて感情移入しやすい——それは「ぶれない伴走力」の裏返し。精神科領域や慢性期のリハビリでは、すぐに結果が出ないことも多く、長い時間本人のペースに付き合い続ける力が求められる。焦らず、逃げずに寄り添える人は貴重。",
+      fields: ["精神科作業療法", "慢性期リハビリ", "緩和ケア"],
+      icon: (c)=>`<circle cx="35" cy="46" r="15" fill="none" stroke="${c}" stroke-width="4"/>
+                   <circle cx="65" cy="46" r="15" fill="none" stroke="${c}" stroke-width="4"/>
+                   <path d="M50 62 L50 82" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`
+    },
+    D: {
+      name: "遊びの魔術師",
+      hook: "「やりたい」を引き出せる人",
+      var: '--d',
+      desc: "落ち着きがない、じっとしているのが苦手——それは裏を返せば、人を飽きさせないエネルギー。小児発達領域のOTは、訓練を「訓練っぽく見せない」ことが腕の見せどころ。遊びの中に成長のきっかけを仕込む発想力が求められる。",
+      fields: ["小児発達支援", "療育", "学校との連携支援"],
+      icon: (c)=>`<path d="M50 10 L61 38 L91 38 L67 56 L76 86 L50 68 L24 86 L33 56 L9 38 L39 38 Z" fill="none" stroke="${c}" stroke-width="4" stroke-linejoin="round"/>`
+    },
+    E: {
+      name: "逆算の設計士",
+      hook: "ゴールから逆算して道筋を描ける人",
+      var: '--e',
+      desc: "効率を考えすぎる、無駄が気になる——それは計画性の高さ。「半年後にこう生活できるように」というゴールから逆算してリハビリ計画を立てたり、地域の予防事業を企画したりする力は、OTがマネジメントや予防領域に関わる際に強く求められる。",
+      fields: ["地域包括ケアマネジメント", "介護予防", "事業企画"],
+      icon: (c)=>`<path d="M14 84 L36 84 L36 66 L58 66 L58 48 L80 48 L80 20" fill="none" stroke="${c}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                   <circle cx="80" cy="20" r="6" fill="${c}"/>`
+    }
+  };
+
+  const closingText = `今日出たタイプ、実は<b>「あなたの短所だと思っていたもの」</b>がベースになっている。OTは、その人の性格をそのまま強みに変えられる仕事——だから性格を選ばない。どんな性格の人にも居場所がある仕事。`;
+
+  let answers = [];
+  let current = 0;
+
+  const root = document.documentElement;
+  const introScreen = document.getElementById('screen-intro');
+  const quizScreen = document.getElementById('screen-quiz');
+  const resultScreen = document.getElementById('screen-result');
+  const trackEl = document.getElementById('track');
+  const qcountEl = document.getElementById('qcount');
+  const qtextEl = document.getElementById('qtext');
+  const optionsEl = document.getElementById('options');
+
+  function setCur(cssVarName){
+    root.style.setProperty('--cur', `var(${cssVarName})`);
+  }
+
+  function buildTrack(){
+    trackEl.innerHTML = '';
+    for(let i=0;i<questions.length;i++){
+      const seg = document.createElement('div');
+      seg.className = 'seg';
+      seg.innerHTML = '<i></i>';
+      trackEl.appendChild(seg);
+    }
+  }
+
+  function paintTrack(){
+    const segs = trackEl.querySelectorAll('.seg');
+    segs.forEach((seg,i)=>{
+      const i_el = seg.querySelector('i');
+      if(i < answers.length){
+        seg.classList.add('filled');
+        i_el.style.background = `var(${cssVar[answers[i]]})`;
+      } else {
+        seg.classList.remove('filled');
+        i_el.style.background = 'var(--white)';
+      }
+    });
+  }
+
+  function showScreen(el){
+    [introScreen, quizScreen, resultScreen].forEach(s=>{ s.classList.remove('active','enter'); });
+    el.classList.add('active');
+    void el.offsetWidth;
+    el.classList.add('enter');
+  }
+
+  function renderQuestion(){
+    const item = questions[current];
+    qcountEl.innerHTML = `Q<b>${String(current+1).padStart(2,'0')}</b> / ${String(questions.length).padStart(2,'0')}`;
+    qtextEl.textContent = item.q;
+    optionsEl.innerHTML = '';
+    item.options.forEach((text, idx)=>{
+      const btn = document.createElement('button');
+      btn.className = 'option';
+      btn.style.setProperty('--opt', `var(${cssVar[letters[idx]]})`);
+      btn.innerHTML = `<span class="ghost">${letters[idx]}</span><span class="badge">${letters[idx]}</span><span>${text}</span>`;
+      btn.addEventListener('click', ()=> selectAnswer(letters[idx], btn));
+      optionsEl.appendChild(btn);
+    });
+    paintTrack();
+  }
+
+  function selectAnswer(letter, btnEl){
+    btnEl.classList.add('picked');
+    setCur(cssVar[letter]);
+    answers.push(letter);
+    paintTrack();
+    setTimeout(()=>{
+      current++;
+      if(current < questions.length){
+        renderQuestion();
+      } else {
+        showResult();
+      }
+    }, 220);
+  }
+
+  // ▼ 会場で使う実際のURLに書き換えてください（結果シートページの公開先）
+  const RESULT_SHEET_BASE_URL = "https://example.com/ot_result_sheet.html";
+
+  function renderQR(letter){
+    const holder = document.getElementById('qr-canvas');
+    holder.innerHTML = '';
+    const url = `${RESULT_SHEET_BASE_URL}?type=${letter}`;
+    new QRCode(holder, {
+      text: url,
+      width: 88,
+      height: 88,
+      colorDark: "#0A0B0A",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  function showResult(){
+    const tally = {A:0,B:0,C:0,D:0,E:0};
+    answers.forEach(a => tally[a]++);
+    const max = Math.max(...Object.values(tally));
+    const winners = Object.keys(tally).filter(k => tally[k] === max);
+
+    const primary = types[winners[0]];
+    const isDouble = winners.length === 2;
+
+    setCur(primary.var);
+    document.getElementById('result-tag').textContent = isDouble ? "DOUBLE TYPE" : "YOUR TYPE";
+
+    if(isDouble){
+      const secondary = types[winners[1]];
+      document.getElementById('result-name').textContent = `${primary.name} × ${secondary.name}`;
+      document.getElementById('result-hook').textContent = `${primary.hook} / ${secondary.hook}`;
+      document.getElementById('result-desc').textContent = primary.desc + "\n\n" + secondary.desc;
+      document.getElementById('result-fields').innerHTML =
+        [...primary.fields, ...secondary.fields].map(f=>`<span class="field-chip">${f}</span>`).join('');
+      document.getElementById('result-icon').innerHTML = primary.icon(`var(${primary.var})`);
+    } else {
+      document.getElementById('result-name').textContent = primary.name;
+      document.getElementById('result-hook').textContent = primary.hook;
+      document.getElementById('result-desc').textContent = primary.desc;
+      document.getElementById('result-fields').innerHTML =
+        primary.fields.map(f=>`<span class="field-chip">${f}</span>`).join('');
+      document.getElementById('result-icon').innerHTML = primary.icon(`var(${primary.var})`);
+    }
+
+    document.getElementById('result-closing').innerHTML = closingText;
+    renderQR(winners[0]);
+    showScreen(resultScreen);
+  }
+
+  document.getElementById('start-btn').addEventListener('click', ()=>{
+    current = 0;
+    answers = [];
+    setCur('--white');
+    buildTrack();
+    renderQuestion();
+    showScreen(quizScreen);
+  });
+
+  document.getElementById('retry-btn').addEventListener('click', ()=>{
+    setCur('--white');
+    showScreen(introScreen);
+  });
+
+  buildTrack();
+
+})();
+</script>
+</body>
+</html>

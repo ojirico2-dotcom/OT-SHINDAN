@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>あなたの中の作業療法士｜診断結果</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --bg: #0A0B0A;
+    --white: #F5F6F2;
+    --muted: #9BA39B;
+    --line: rgba(245,246,242,0.16);
+    --a: #17E3A1; --b: #FF8A3D; --c: #FF3D77; --d: #2FD1FF; --e: #9A7CFF;
+    --cur: var(--a);
+    --font: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; min-height: 100%;
+    background: #06070A;
+    color: var(--white);
+    font-family: var(--font);
+    display:flex; flex-direction: column; align-items: center;
+    padding: 22px 14px 34px;
+  }
+
+  #stage-wrap{
+    width: 100%; max-width: 420px;
+    display:flex; flex-direction:column; align-items:center; gap: 18px;
+  }
+
+  /* ---- 保存対象のシート本体（縦長ストーリー比率）---- */
+  #sheet{
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    border-radius: 26px;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    display:flex; flex-direction: column;
+    padding: 7% 8% 6%;
+  }
+  #sheet::before{
+    content:''; position:absolute; inset:0; z-index:0;
+    background:
+      radial-gradient(55% 40% at 20% 8%, color-mix(in srgb, var(--cur) 55%, transparent), transparent 70%),
+      radial-gradient(60% 46% at 85% 96%, color-mix(in srgb, var(--cur) 30%, transparent), transparent 72%),
+      radial-gradient(70% 60% at 50% 50%, #0A0B0A, #06070A 100%);
+  }
+  #sheet::after{
+    content:''; position:absolute; inset:0; z-index:0;
+    border: 1.5px solid color-mix(in srgb, var(--cur) 40%, var(--line));
+    border-radius: 26px;
+    pointer-events:none;
+  }
+  #sheet > *{ position: relative; z-index: 1; }
+
+  .s-eyebrow{
+    font-size: 2.6vw; letter-spacing: 0.24em; font-weight: 800;
+    color: var(--muted); text-transform: uppercase;
+  }
+  #sheet .s-eyebrow{ font-size: clamp(9px, 2.9vw, 12px); }
+
+  .s-top{ display:flex; align-items:center; justify-content: space-between; }
+  .s-tag{
+    font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--cur); font-size: clamp(9px, 2.6vw, 11px);
+    border: 1px solid color-mix(in srgb, var(--cur) 55%, transparent);
+    border-radius: 999px; padding: 5px 10px;
+  }
+
+  .s-mid{ flex: 1; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap: 4%; margin-top: 2%; }
+  .s-icon{ width: 15%; aspect-ratio: 1/1; }
+  .s-name{
+    font-size: clamp(26px, 8.6vw, 42px);
+    font-weight: 900; letter-spacing: -0.02em; line-height: 1.12; margin:0;
+  }
+  .s-hook{
+    font-size: clamp(12px, 3.6vw, 15px); font-weight: 700; color: var(--muted); margin: 0;
+  }
+  .s-line{
+    font-size: clamp(11.5px, 3.3vw, 13.5px); line-height: 1.85; color: #DADCD8; margin: 0;
+  }
+  .s-fields{ display:flex; gap: 6px; flex-wrap: wrap; margin-top: 2%; }
+  .s-chip{
+    font-size: clamp(9px, 2.6vw, 10.5px); font-weight: 800;
+    border: 1px solid color-mix(in srgb, var(--cur) 55%, var(--line));
+    background: color-mix(in srgb, var(--cur) 12%, transparent);
+    border-radius: 999px; padding: 5px 10px;
+  }
+
+  .s-bottom{ display:flex; flex-direction: column; gap: 6px; }
+  .s-tagline{
+    font-size: clamp(10px, 2.9vw, 12px); font-weight: 700; color: var(--white);
+    border-top: 1px solid var(--line); padding-top: 3%;
+  }
+  .s-school{
+    font-size: clamp(8.5px, 2.4vw, 10px); color: var(--muted); letter-spacing: 0.06em;
+  }
+
+  /* ---- 保存対象の外側 UI ---- */
+  .hint{
+    font-size: 13px; color: var(--muted); text-align:center; line-height: 1.8; margin: 0;
+  }
+  .type-switch{ display:flex; gap: 8px; flex-wrap: wrap; justify-content:center; }
+  .type-btn{
+    font-family: var(--font); font-size: 12px; font-weight: 800;
+    border: 1.5px solid var(--tc); color: var(--white);
+    background: color-mix(in srgb, var(--tc) 16%, transparent);
+    border-radius: 999px; padding: 8px 14px; cursor: pointer;
+  }
+  .type-btn.active{ background: var(--tc); color: var(--bg); }
+
+  .save-btn{
+    font-family: var(--font); font-size: 15px; font-weight: 900; letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: var(--white); color: var(--bg); border:none; border-radius: 999px;
+    padding: 16px 40px; cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .save-btn:active{ transform: scale(0.97); }
+  .save-status{ font-size: 12.5px; color: var(--muted); min-height: 16px; }
+</style>
+</head>
+<body>
+
+<div id="stage-wrap">
+
+  <div id="sheet">
+    <div class="s-top">
+      <div class="s-eyebrow">FUKUOKA IKEN &amp; SPORTS COLLEGE</div>
+      <div class="s-tag" id="s-tag">YOUR TYPE</div>
+    </div>
+
+    <div class="s-mid">
+      <svg class="s-icon" id="s-icon" viewBox="0 0 100 100"></svg>
+      <h1 class="s-name" id="s-name"></h1>
+      <p class="s-hook" id="s-hook"></p>
+      <p class="s-line" id="s-line"></p>
+      <div class="s-fields" id="s-fields"></div>
+    </div>
+
+    <div class="s-bottom">
+      <div class="s-tagline">「治す」じゃなく、「したい」をかなえる仕事。</div>
+      <div class="s-school">福岡医健・スポーツ専門学校　作業療法学科</div>
+    </div>
+  </div>
+
+  <p class="hint" id="hint">この画像を保存して、SNSやスマホに残せます。</p>
+
+  <button class="save-btn" id="save-btn">画像を保存する</button>
+  <div class="save-status" id="save-status"></div>
+
+  <div class="type-switch" id="type-switch"></div>
+</div>
+
+<script>
+(function(){
+  const types = {
+    A: { name:"観察の匠", hook:"人の「変化」に気づける人", cvar:'--a',
+         line:"小さな変化を見逃さない観察力が、リハビリの成果を左右する。",
+         fields:["高齢者リハビリ","地域包括ケア","訪問リハビリ"],
+         icon:(c)=>`<circle cx="50" cy="50" r="34" fill="none" stroke="${c}" stroke-width="4"/><circle cx="50" cy="50" r="9" fill="${c}"/><path d="M50 12 L50 24 M50 76 L50 88 M12 50 L24 50 M76 50 L88 50" stroke="${c}" stroke-width="4" stroke-linecap="round"/>` },
+    B: { name:"発想の仕掛け人", hook:"「もっと楽になる方法」を思いつく人", cvar:'--b',
+         line:"既存のやり方を疑って工夫できる力が、暮らしを変える道具になる。",
+         fields:["身体障害領域","自助具・福祉用具","住環境調整"],
+         icon:(c)=>`<path d="M50 12 C68 12 82 26 82 43 C82 55 74 60 71 68 L29 68 C26 60 18 55 18 43 C18 26 32 12 50 12 Z" fill="none" stroke="${c}" stroke-width="4"/><path d="M36 78 L64 78 M40 88 L60 88" stroke="${c}" stroke-width="4" stroke-linecap="round"/>` },
+    C: { name:"伴走者", hook:"そばにいて、一緒に歩ける人", cvar:'--c',
+         line:"焦らず、逃げずに寄り添う力が、長い回復の道を支える。",
+         fields:["精神科作業療法","慢性期リハビリ","緩和ケア"],
+         icon:(c)=>`<circle cx="35" cy="46" r="15" fill="none" stroke="${c}" stroke-width="4"/><circle cx="65" cy="46" r="15" fill="none" stroke="${c}" stroke-width="4"/><path d="M50 62 L50 82" stroke="${c}" stroke-width="4" stroke-linecap="round"/>` },
+    D: { name:"遊びの魔術師", hook:"「やりたい」を引き出せる人", cvar:'--d',
+         line:"遊びの中に成長のきっかけを仕込む発想力が、子どもの力を伸ばす。",
+         fields:["小児発達支援","療育","学校との連携支援"],
+         icon:(c)=>`<path d="M50 10 L61 38 L91 38 L67 56 L76 86 L50 68 L24 86 L33 56 L9 38 L39 38 Z" fill="none" stroke="${c}" stroke-width="4" stroke-linejoin="round"/>` },
+    E: { name:"逆算の設計士", hook:"ゴールから逆算して道筋を描ける人", cvar:'--e',
+         line:"半年後の生活から逆算する計画性が、地域を支える仕組みになる。",
+         fields:["地域包括ケアマネジメント","介護予防","事業企画"],
+         icon:(c)=>`<path d="M14 84 L36 84 L36 66 L58 66 L58 48 L80 48 L80 20" fill="none" stroke="${c}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="80" cy="20" r="6" fill="${c}"/>` }
+  };
+  const order = ['A','B','C','D','E'];
+  const root = document.documentElement;
+
+  function paramType(){
+    const p = new URLSearchParams(location.search).get('type');
+    return types[p] ? p : 'A';
+  }
+
+  function render(letter){
+    const t = types[letter];
+    root.style.setProperty('--cur', `var(${t.cvar})`);
+    document.getElementById('s-name').textContent = t.name;
+    document.getElementById('s-hook').textContent = t.hook;
+    document.getElementById('s-line').textContent = t.line;
+    document.getElementById('s-icon').innerHTML = t.icon(`var(${t.cvar})`);
+    document.getElementById('s-fields').innerHTML = t.fields.map(f=>`<span class="s-chip">${f}</span>`).join('');
+
+    const sw = document.getElementById('type-switch');
+    sw.innerHTML = '';
+    order.forEach(k=>{
+      const b = document.createElement('button');
+      b.className = 'type-btn' + (k===letter ? ' active' : '');
+      b.textContent = types[k].name;
+      b.style.setProperty('--tc', `var(${types[k].cvar})`);
+      b.addEventListener('click', ()=>{
+        const url = new URL(location.href);
+        url.searchParams.set('type', k);
+        history.replaceState(null,'',url);
+        render(k);
+      });
+      sw.appendChild(b);
+    });
+  }
+
+  render(paramType());
+
+  document.getElementById('save-btn').addEventListener('click', async ()=>{
+    const status = document.getElementById('save-status');
+    status.textContent = '画像を作成中…';
+    try{
+      const sheet = document.getElementById('sheet');
+      const canvas = await html2canvas(sheet, { backgroundColor: null, scale: 3 });
+      const link = document.createElement('a');
+      link.download = 'ot_shindan_result.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      status.textContent = '保存しました（写真アプリ／ダウンロードをご確認ください）';
+    }catch(e){
+      status.textContent = '保存できない場合は、この画面を長押しして「画像を保存」してください';
+    }
+  });
+})();
+</script>
+</body>
+</html>
